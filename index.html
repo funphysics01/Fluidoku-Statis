@@ -216,16 +216,37 @@
 <body>
   <div class="header">FLUIDOKU</div>
   <div id="notifArea"></div>
-  <div id="authArea" class="panel" style="max-width: 400px; margin: 20px auto; text-align: center;">
-    <h3 style="color: var(--neon-yellow)">MASUK PERMAINAN</h3>
-    <input type="text" id="playerName" placeholder="Nama Anda" style="margin-bottom:10px; 
+  
+  <!-- ================= LAYAR PEMILIHAN MODE ================= -->
+  <div id="modeSelectionArea" class="panel" style="max-width: 400px; margin: 20px auto; text-align: center;">
+    <h3 style="color: var(--neon-yellow)">PILIH MODE</h3>
+    <button class="btn btn-primary" style="margin-bottom: 10px;" onclick="showAuth('moderator')">MODERATOR</button>
+    <button class="btn btn-outline-cyan" onclick="showAuth('pemain')">PEMAIN</button>
+  </div>
+
+  <!-- Form Login Moderator -->
+  <div id="authModerator" class="panel" style="display: none; max-width: 400px; margin: 20px auto; text-align: center;">
+    <h3 style="color: var(--neon-orange)">LOGIN MODERATOR</h3>
+    <input type="text" id="modName" placeholder="Nama Anda" style="margin-bottom:10px; 
       padding:12px; width:100%; box-sizing:border-box; background:#000; 
       border:1px solid var(--neon-blue); color:#fff; border-radius:6px;">
-    <input type="password" id="modPass" placeholder="Password Moderator (Opsional)" 
+    <input type="password" id="modPassInput" placeholder="Password Moderator" 
       style="margin-bottom:15px; padding:12px; width:100%; box-sizing:border-box; 
       background:#000; border:1px solid var(--neon-blue); color:#fff; border-radius:6px;">
-    <button class="btn btn-primary" onclick="handleJoin()">MASUK PERMAINAN</button>
+    <button class="btn btn-primary" onclick="handleJoin('moderator')">MASUK</button>
+    <button class="btn btn-reset" style="margin-top:10px;" onclick="backToMode()">KEMBALI</button>
   </div>
+
+  <!-- Form Login Pemain -->
+  <div id="authPemain" class="panel" style="display: none; max-width: 400px; margin: 20px auto; text-align: center;">
+    <h3 style="color: var(--neon-cyan)">LOGIN PEMAIN</h3>
+    <input type="text" id="pemainName" placeholder="Nama Anda" style="margin-bottom:15px; 
+      padding:12px; width:100%; box-sizing:border-box; background:#000; 
+      border:1px solid var(--neon-blue); color:#fff; border-radius:6px;">
+    <button class="btn btn-primary" onclick="handleJoin('pemain')">MASUK</button>
+    <button class="btn btn-reset" style="margin-top:10px;" onclick="backToMode()">KEMBALI</button>
+  </div>
+  <!-- ========================================================== -->
 
   <div id="lobbyArea" class="panel" style="display: none; max-width: 400px; margin: 20px auto; text-align: center;">
     <h2 id="lobbyTitle">Ruang Tunggu</h2>
@@ -301,7 +322,6 @@
     </div>
   </div>
 
-  <!-- MODAL SOAL DENGAN TOMBOL BATAL -->
   <div id="questionModal" class="modal hidden">
     <div class="modal-content">
         <h3 style="color: var(--neon-cyan); margin-top:0; font-size: 18px;">SOAL FISIKA</h3>
@@ -311,7 +331,6 @@
     </div>
   </div>
 
-  <!-- MODAL PEMBAHASAN -->
   <div id="pembahasanModal" class="modal hidden">
     <div class="modal-content">
         <h3 style="color: var(--neon-green); margin-top:0; font-size: 18px; text-align: center;">PEMBAHASAN</h3>
@@ -371,12 +390,41 @@
     const soundCorrect = new Audio('https://github.com/funphysics01/Fluidoku-Statis/raw/refs/heads/main/sound/freesound_community-funny-yay-6273.mp3'); 
     const soundWrong = new Audio('https://github.com/funphysics01/Fluidoku-Statis/raw/refs/heads/main/sound/freesound_community-buzzer2-6109.mp3');
 
-    function handleJoin() {
-      const name = document.getElementById("playerName").value.trim();
-      const pass = document.getElementById("modPass").value.trim();
-      if (!name) return alert("Isi nama dulu!");
+    // =========== FUNGSI BARU UNTUK NAVIGASI LOGIN ===========
+    function showAuth(mode) {
+      document.getElementById('modeSelectionArea').style.display = 'none';
+      if (mode === 'moderator') {
+        document.getElementById('authModerator').style.display = 'block';
+      } else {
+        document.getElementById('authPemain').style.display = 'block';
+      }
+    }
+
+    function backToMode() {
+      document.getElementById('authModerator').style.display = 'none';
+      document.getElementById('authPemain').style.display = 'none';
+      document.getElementById('modeSelectionArea').style.display = 'block';
+    }
+    // =========================================================
+
+    // Modifikasi handleJoin untuk menerima mode
+    function handleJoin(mode) {
+      let name = "";
+      
+      if (mode === 'moderator') {
+        name = document.getElementById("modName").value.trim();
+        const pass = document.getElementById("modPassInput").value.trim();
+        if (!name) return alert("Isi nama dulu!");
+        if (!pass) return alert("Password Moderator harus diisi!");
+        if (pass !== MODERATOR_PASSWORD) return alert("Password Moderator Salah!");
+        isModerator = true;
+      } else {
+        name = document.getElementById("pemainName").value.trim();
+        if (!name) return alert("Isi nama dulu!");
+        isModerator = false;
+      }
+
       currentPlayer = name;
-      isModerator = (pass === MODERATOR_PASSWORD);
       playerAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`;
 
       if (isModerator) {
@@ -390,8 +438,12 @@
       }
 
       database.ref('players/' + name).set({ name, avatar: playerAvatar, isModerator });
-      document.getElementById("authArea").style.display = "none";
+      
+      // Sembunyikan form login, tampilkan lobby
+      document.getElementById("authModerator").style.display = "none";
+      document.getElementById("authPemain").style.display = "none";
       document.getElementById("lobbyArea").style.display = "block";
+      
       if (isModerator) document.getElementById("modControls").style.display = "block";
       document.getElementById("myAvatarContainer").innerHTML = `<img src="${playerAvatar}" style="width:70px;"><br><b>${name}</b>`;
       sendNotification(`🎮 ${name} bergabung ke permainan!`);
